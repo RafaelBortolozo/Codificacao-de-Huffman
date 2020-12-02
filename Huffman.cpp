@@ -22,19 +22,21 @@ typedef struct sBinary{
 
 FILE* readArquive();
 FILE* readArquiveBinary();
-FILE* writeArquive();
+FILE* writeArquiveBinary();
 FILE* writeArquiveDecoded();
+
 void frequencyCalc(std::vector<Nodo*> &vet, FILE* text);
 Nodo* createNodo(Nodo* left, Nodo* right, char c, unsigned int freq);
 void insertionSort(std::vector<Nodo*> &vet);
-void print(std::vector<Nodo*> &vet);
 Nodo* createHuffmanTree(std::vector<Nodo*> &vet);
 void binarySequenceCalc(Nodo* root, std::vector<Binary*> &vetBinary, char* binary, int top);
 Binary* createBinary(char c, char* binary, int top);
-void convertTextToBinary(std::vector<Binary*> &vetBinary);
-void convertBinaryToText(Nodo* root);
-void pos_ordem (Nodo* root);
-void printVetBinary(std::vector<Binary*> &vetBinary);
+void convertTextToBinary(std::vector<Binary*> &vetBinary, std::vector<char> &binaryText);
+void convertBinaryToText(std::vector<char> &binaryText);
+int decimalCalculator(int* bits);
+void decoder(Nodo* root);
+
+
 
 main(){
 	Nodo* root= NULL;
@@ -49,16 +51,20 @@ main(){
 		root= createHuffmanTree(vet);
 	
 	//passo 3: calcular a sequencia binaria de cada simbolo
-		std::vector<Binary*> vetBinary;
-		char binary[QTD_BITS];
-		int top=0;
+		std::vector<Binary*> vetBinary; //armazenara as letras e suas sequencias binarias
+		char binary[QTD_BITS]; //variavel auxiliar
+		int top=0; //variavel auxiliar
 		binarySequenceCalc(root, vetBinary, binary, top);
 	
 	//passo 4: converter o texto em binario
-		convertTextToBinary(vetBinary);
-
+		std::vector<char> binaryText; //armazenara o texto na forma binaria
+		convertTextToBinary(vetBinary, binaryText);
+		
+	//passo 5: compressao, converter o codigo binario em novos simbolos
+		convertBinaryToText(binaryText);
+	
+	
 	//DECODIFICACAO:
-		convertBinaryToText(root);
 	
 }
 
@@ -71,8 +77,8 @@ FILE* readArquive(){
 	return file;
 }
 
-FILE* readArquiveBinary(){
-	FILE *file= fopen("binaryText.txt", "r");
+FILE* readArquiveCompressed(){
+	FILE *file= fopen("compressedText.txt", "r");
 	if(file==NULL){
 		printf("Erro ao abrir o arquivo");
 		exit(1);
@@ -80,8 +86,8 @@ FILE* readArquiveBinary(){
 	return file;
 }
 
-FILE* writeArquive(){
-	FILE *file= fopen("binaryText.txt", "a");
+FILE* writeArquiveBinary(){
+	FILE *file= fopen("binaryText.bin", "wb");
 	if(file==NULL){
 		printf("Erro ao gerar o arquivo");
 		exit(1);
@@ -90,13 +96,23 @@ FILE* writeArquive(){
 }
 
 FILE* writeArquiveDecoded(){
-	FILE *file= fopen("decodedText.txt", "a");
+	FILE *file= fopen("decodedText.txt", "w");
 	if(file==NULL){
 		printf("Erro ao gerar o arquivo");
 		exit(1);
 	}
 	return file;
 }
+
+FILE* writeArquiveCompressed(){
+	FILE *file= fopen("compressedText.txt", "w");
+	if(file==NULL){
+		printf("Erro ao gerar o arquivo");
+		exit(1);
+	}
+	return file;
+}
+
 void frequencyCalc(std::vector<Nodo*> &vet, FILE* text){
 	Nodo* aux;
 	char c= fgetc(text);
@@ -132,28 +148,6 @@ void insertionSort(std::vector<Nodo*> &vet){
 			vet[j] = vet[j-1];
 		}
 		vet[j] = tmp;
-	}
-}
-
-void print(std::vector<Nodo*> &vet){
-	for(int i=0; i < vet.size(); i++){
-		printf("%c - %d\n", vet[i]->c, vet[i]->freq);
-	}
-}
-
-void pos_ordem (Nodo* root){
- 	if(root != NULL){
-	    pos_ordem(root->left);
-	    pos_ordem(root->right);
-	    if(root->c != NULL){
-	    	printf("%c ",root->c);
-		}
- 	}
-}
-
-void printVetBinary(std::vector<Binary*> &vetBinary){
-	for(int i=0; i< vetBinary.size(); i++){
-		printf("%c - %s\n", vetBinary[i]->c, vetBinary[i]->binary);
 	}
 }
 
@@ -211,9 +205,10 @@ void binarySequenceCalc(Nodo* root, std::vector<Binary*> &vetBinary, char* binar
 
 Binary* createBinary(char c, char* binary, int top){
 	Binary* aux= (Binary*)malloc(sizeof(Binary));
-	aux->c= c;
-	int i=0;
+	aux->c= c; //set caractere
 	
+	//set sequencia binaria
+	int i=0;
 	for(i; i<top; i++){
 		aux->binary[i]= binary[i];
 	}
@@ -222,30 +217,69 @@ Binary* createBinary(char c, char* binary, int top){
 	return aux;
 }
 
-void convertTextToBinary(std::vector<Binary*> &vetBinary){
-	FILE* text= readArquive();
-	FILE* binaryText= writeArquive();
+void convertTextToBinary(std::vector<Binary*> &vetBinary, std::vector<char> &binaryText){
+	FILE* text_Arq= readArquive();
+	FILE* binaryText_Arq= writeArquiveBinary();
 	
-	char c= fgetc(text);
+	//percorre cada letra do texto
+	char c= fgetc(text_Arq);
 	while(c != EOF){
+		//procura no vetBinary o elemento com a letra igual
 		for(int i=0; i<vetBinary.size(); i++){
 			if(vetBinary[i]->c == c){
-				fprintf(binaryText,"%s", vetBinary[i]->binary);
+				//adiciona a sequencia binaria no vector
+				for(int j=0; j<QTD_BITS && vetBinary[i]->binary[j] != NULL; j++){
+					binaryText.push_back(vetBinary[i]->binary[j]);
+				}
+				
 				break;
 			}
 		}
-		c= fgetc(text);
+		c= fgetc(text_Arq);
 	}
-	fclose(text);
-	fclose(binaryText);	
+	
+	//adiciona os bits em um arquivo, serve apenas para visualizacao
+	for(int i=0; i<binaryText.size(); i++){
+		fprintf(binaryText_Arq,"%s", binaryText[i]);
+	}
+	
+	fclose(text_Arq);
+	fclose(binaryText_Arq);
 }
 
-void convertBinaryToText(Nodo* root){
-	FILE* binaryText= readArquiveBinary();
-	FILE* decodedText= writeArquiveDecoded();
+void convertBinaryToText(std::vector<char> &binaryText){
+	FILE* compressedText_Arq= writeArquiveCompressed();
+	int bits[8];
+	int cont=0, i=0, decimal;
+	
+	//percorre o vector binaryText para capturar os bits
+	for(i; i<binaryText.size(); i++){
+		if(cont!=8){
+			if(binaryText[i]=='0'){
+				bits[cont]= 0;
+				cont++;
+			}else if(binaryText[i]=='1'){
+				bits[cont]= 1;
+				cont++;
+			}	
+		}else{
+			cont= 0;
+			decimal= decimalCalculator(bits)
+			for(int j=0; j<8; j++) bits[j]=2;
+		}
+	}
+}
+
+int decimalCalculator(int* bits){
+	
+}
+
+void decoder(Nodo* root){
+	FILE* compressedText_Arq= readArquiveCompressed();
+	FILE* decodedText_Arq= writeArquiveDecoded();
 	Nodo* aux= root;
 	
-	char c= fgetc(binaryText);
+	char c= fgetc(compressedText_Arq);
 	while(c != EOF){
 		if(c == '0'){
 			aux= aux->left;
@@ -254,13 +288,12 @@ void convertBinaryToText(Nodo* root){
 		}
 		
 		if(aux->left == NULL && aux->right == NULL){
-			fprintf(decodedText,"%c", aux->c);
+			fprintf(decodedText_Arq,"%c", aux->c);
 			aux= root;
 		}
-		c= fgetc(binaryText);
+		c= fgetc(compressedText_Arq);
 	}
-	fclose(binaryText);
-	fclose(decodedText);
+	
+	fclose(compressedText_Arq);
+	fclose(decodedText_Arq);
 }
-
-
