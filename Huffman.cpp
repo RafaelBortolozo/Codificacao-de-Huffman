@@ -1,6 +1,7 @@
 #include <stdio.h> 
 #include <stdlib.h>
 #include <vector>
+#include <string.h>
 #include <conio.h>
 #define QTD_BITS 15
 
@@ -32,6 +33,9 @@ void binarySequenceCalc(Nodo* root, std::vector<Binary*> &vetBinary, char* binar
 Binary* createBinary(char c, char* binary, int top);
 void convertTextToBinary(std::vector<Binary*> &vetBinary);
 void decoder(Nodo* root);
+Nodo* freeHuffmanTree(Nodo* root);
+void freeVetBinary(std::vector<Binary*> &vetBinary);
+
 
 main(){
 	Nodo* root= NULL;
@@ -44,7 +48,7 @@ main(){
 
 	//passo 2: construir a arvore binaria
 		root= createHuffmanTree(vet);
-
+	
 	//passo 3: calcular a sequencia binaria de cada simbolo
 		std::vector<Binary*> vetBinary;
 		char binary[QTD_BITS];
@@ -56,7 +60,11 @@ main(){
 
 	//DECODIFICACAO:
 		decoder(root);
-
+	
+		
+	//libera memoria alocada
+		root= freeHuffmanTree(root);
+		freeVetBinary(vetBinary);
 }
 
 FILE* readArquive(){
@@ -69,7 +77,7 @@ FILE* readArquive(){
 }
 
 FILE* readArquiveBinary(){
-	FILE *file= fopen("binaryText.bin", "rb");
+	FILE *file= fopen("binaryText.bin", "r");
 	if(file==NULL){
 		printf("Erro ao abrir o arquivo binaryText.bin");
 		exit(1);
@@ -87,7 +95,7 @@ FILE* writeArquiveBinary(){
 }
 
 FILE* writeArquiveDecoded(){
-	FILE *file= fopen("decodedText.txt", "w");
+	FILE *file= fopen("decodedText.txt", "wb");
 	if(file==NULL){
 		printf("Erro ao gerar o arquivo decodedText.txt");
 		exit(1);
@@ -253,4 +261,23 @@ void decoder(Nodo* root){
 	}
 	fclose(binaryText);
 	fclose(decodedText);
+}
+
+/* LIBERA MEMORIA ALOCADA */
+Nodo* freeHuffmanTree(Nodo* root){
+	if(root != NULL){
+		root->left= freeHuffmanTree(root->left);
+		root->right= freeHuffmanTree(root->right);
+		free(root);
+	}
+	return NULL;
+}
+
+void freeVetBinary(std::vector<Binary*> &vetBinary){
+	Binary* aux;
+	while(vetBinary.empty() == false){
+		aux= vetBinary.front();
+		vetBinary.erase(vetBinary.begin());
+		free(aux);
+	}
 }
