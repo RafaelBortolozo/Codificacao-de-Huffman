@@ -24,63 +24,54 @@ FILE* readArquive();
 FILE* readArquiveBinary();
 FILE* writeArquiveBinary();
 FILE* writeArquiveDecoded();
-
 void frequencyCalc(std::vector<Nodo*> &vet, FILE* text);
 Nodo* createNodo(Nodo* left, Nodo* right, char c, unsigned int freq);
 void insertionSort(std::vector<Nodo*> &vet);
 Nodo* createHuffmanTree(std::vector<Nodo*> &vet);
 void binarySequenceCalc(Nodo* root, std::vector<Binary*> &vetBinary, char* binary, int top);
 Binary* createBinary(char c, char* binary, int top);
-void convertTextToBinary(std::vector<Binary*> &vetBinary, std::vector<char> &binaryText);
-void convertBinaryToText(std::vector<char> &binaryText);
-int decimalCalculator(int* bits);
+void convertTextToBinary(std::vector<Binary*> &vetBinary);
 void decoder(Nodo* root);
-
-
 
 main(){
 	Nodo* root= NULL;
-	std::vector<Nodo*> vet;
-	FILE* text= readArquive();
 	
 	//passo 1: calcular frequencias
+		FILE* text= readArquive();
+		std::vector<Nodo*> vet;
 		frequencyCalc(vet, text);
 		insertionSort(vet);
-	
-	//passo 2: contruir a arvore binaria
+
+	//passo 2: construir a arvore binaria
 		root= createHuffmanTree(vet);
-	
+
 	//passo 3: calcular a sequencia binaria de cada simbolo
-		std::vector<Binary*> vetBinary; //armazenara as letras e suas sequencias binarias
-		char binary[QTD_BITS]; //variavel auxiliar
-		int top=0; //variavel auxiliar
+		std::vector<Binary*> vetBinary;
+		char binary[QTD_BITS];
+		int top=0;
 		binarySequenceCalc(root, vetBinary, binary, top);
-	
+
 	//passo 4: converter o texto em binario
-		std::vector<char> binaryText; //armazenara o texto na forma binaria
-		convertTextToBinary(vetBinary, binaryText);
-		
-	//passo 5: compressao, converter o codigo binario em novos simbolos
-		convertBinaryToText(binaryText);
-	
-	
+		convertTextToBinary(vetBinary);
+
 	//DECODIFICACAO:
-	
+		decoder(root);
+
 }
 
 FILE* readArquive(){
 	FILE *file= fopen("text.txt", "r");
 	if(file==NULL){
-		printf("Erro ao abrir o arquivo");
+		printf("Erro ao abrir o arquivo text.txt");
 		exit(1);
 	}
 	return file;
 }
 
-FILE* readArquiveCompressed(){
-	FILE *file= fopen("compressedText.txt", "r");
+FILE* readArquiveBinary(){
+	FILE *file= fopen("binaryText.bin", "rb");
 	if(file==NULL){
-		printf("Erro ao abrir o arquivo");
+		printf("Erro ao abrir o arquivo binaryText.bin");
 		exit(1);
 	}
 	return file;
@@ -89,7 +80,7 @@ FILE* readArquiveCompressed(){
 FILE* writeArquiveBinary(){
 	FILE *file= fopen("binaryText.bin", "wb");
 	if(file==NULL){
-		printf("Erro ao gerar o arquivo");
+		printf("Erro ao gerar o arquivo binaryText.bin");
 		exit(1);
 	}
 	return file;
@@ -98,37 +89,31 @@ FILE* writeArquiveBinary(){
 FILE* writeArquiveDecoded(){
 	FILE *file= fopen("decodedText.txt", "w");
 	if(file==NULL){
-		printf("Erro ao gerar o arquivo");
+		printf("Erro ao gerar o arquivo decodedText.txt");
 		exit(1);
 	}
 	return file;
 }
-
-FILE* writeArquiveCompressed(){
-	FILE *file= fopen("compressedText.txt", "w");
-	if(file==NULL){
-		printf("Erro ao gerar o arquivo");
-		exit(1);
-	}
-	return file;
-}
-
 void frequencyCalc(std::vector<Nodo*> &vet, FILE* text){
 	Nodo* aux;
 	char c= fgetc(text);
+	
+	//EOF: End Of File
 	while(c != EOF){
-		for(int i=0; i<vet.size() || vet.empty() ;i++){
-			if(vet.empty()){
-				aux= createNodo(NULL, NULL, c, 1);
-				vet.push_back(aux);
-				break;
-			}else{
-				
+		//caso o vector esteja vazio, adiciona um nodo
+		if(vet.empty()){
+			aux= createNodo(NULL, NULL, c, 1);
+			vet.push_back(aux);
+		}else{
+			
+			//senao, percorre o vector ate encontrar um nodo com o caractere igual
+			for(int i=0; i<vet.size();i++){
 				if(c == vet[i]->c){
 					vet[i]->freq += 1;
 					break;
 				}
 				
+				//caso nao encontre, adiciona
 				else if(i==vet.size()-1){
 					aux= createNodo(NULL, NULL, c, 1);
 					vet.push_back(aux);
@@ -171,15 +156,15 @@ Nodo* createHuffmanTree(std::vector<Nodo*> &vet){
 		vet.erase(vet.begin());
 		aux2= vet.front();
 		vet.erase(vet.begin());
-		
+
 		//une os nodos a um nodo pai
 		root= createNodo(aux1, aux2, NULL, (aux1->freq+aux2->freq));
-		
+
 		//se o vector ficou vazio, entao retorne o root
 		if(vet.empty()){
 			return root;
 		}
-		
+
 		//se nao, adiciona o root no vector, respeitando a ordem crescente
 		vet.push_back(root);
 		insertionSort(vet);	
@@ -187,17 +172,21 @@ Nodo* createHuffmanTree(std::vector<Nodo*> &vet){
 }
 
 void binarySequenceCalc(Nodo* root, std::vector<Binary*> &vetBinary, char* binary, int top){
+	//percurso pos-ordem
 	
+	//avanca para a esquerda, adiciona 0
 	if(root->left != NULL){
 		binary[top]='0';
 		binarySequenceCalc(root->left, vetBinary, binary, top+1);
 	}
 	
+	//avanca para a direita, adiciona 1
 	if(root->right != NULL){
 		binary[top]='1';
 		binarySequenceCalc(root->right, vetBinary, binary, top+1);
 	}
 	
+	//ao encontrar uma folha, cria e adiciona no vector o caractere com sua sequencia binaria
 	if(root->left==NULL && root->right==NULL){
 		vetBinary.push_back(createBinary(root->c, binary, top));
 	}
@@ -205,95 +194,63 @@ void binarySequenceCalc(Nodo* root, std::vector<Binary*> &vetBinary, char* binar
 
 Binary* createBinary(char c, char* binary, int top){
 	Binary* aux= (Binary*)malloc(sizeof(Binary));
-	aux->c= c; //set caractere
-	
-	//set sequencia binaria
+	aux->c= c;
 	int i=0;
+
 	for(i; i<top; i++){
 		aux->binary[i]= binary[i];
 	}
 	aux->binary[i]= NULL;
-	
+
 	return aux;
 }
 
-void convertTextToBinary(std::vector<Binary*> &vetBinary, std::vector<char> &binaryText){
-	FILE* text_Arq= readArquive();
-	FILE* binaryText_Arq= writeArquiveBinary();
-	
-	//percorre cada letra do texto
-	char c= fgetc(text_Arq);
+void convertTextToBinary(std::vector<Binary*> &vetBinary){
+	FILE* text= readArquive();
+	FILE* binaryText= writeArquiveBinary();
+
+	char c= fgetc(text);
 	while(c != EOF){
-		//procura no vetBinary o elemento com a letra igual
+		//para cada letra, percorre-se o vector
 		for(int i=0; i<vetBinary.size(); i++){
+			
+			//ao encontrar uma letra, seta a sequencia binaria no arquivo binario
 			if(vetBinary[i]->c == c){
-				//adiciona a sequencia binaria no vector
-				for(int j=0; j<QTD_BITS && vetBinary[i]->binary[j] != NULL; j++){
-					binaryText.push_back(vetBinary[i]->binary[j]);
-				}
-				
+				fprintf(binaryText,"%s", vetBinary[i]->binary);
 				break;
 			}
 		}
-		c= fgetc(text_Arq);
+		c= fgetc(text);
 	}
-	
-	//adiciona os bits em um arquivo, serve apenas para visualizacao
-	for(int i=0; i<binaryText.size(); i++){
-		fprintf(binaryText_Arq,"%s", binaryText[i]);
-	}
-	
-	fclose(text_Arq);
-	fclose(binaryText_Arq);
-}
-
-void convertBinaryToText(std::vector<char> &binaryText){
-	FILE* compressedText_Arq= writeArquiveCompressed();
-	int bits[8];
-	int cont=0, i=0, decimal;
-	
-	//percorre o vector binaryText para capturar os bits
-	for(i; i<binaryText.size(); i++){
-		if(cont!=8){
-			if(binaryText[i]=='0'){
-				bits[cont]= 0;
-				cont++;
-			}else if(binaryText[i]=='1'){
-				bits[cont]= 1;
-				cont++;
-			}	
-		}else{
-			cont= 0;
-			decimal= decimalCalculator(bits)
-			for(int j=0; j<8; j++) bits[j]=2;
-		}
-	}
-}
-
-int decimalCalculator(int* bits){
-	
+	fclose(text);
+	fclose(binaryText);	
 }
 
 void decoder(Nodo* root){
-	FILE* compressedText_Arq= readArquiveCompressed();
-	FILE* decodedText_Arq= writeArquiveDecoded();
+	//leitura do arquivo binario
+	//escrita do texto decodificado
+	FILE* binaryText= readArquiveBinary();
+	FILE* decodedText= writeArquiveDecoded();
 	Nodo* aux= root;
-	
-	char c= fgetc(compressedText_Arq);
+
+	char c= fgetc(binaryText);
 	while(c != EOF){
+		//percorre a arvore ate chegar numa folha
+		//left=0
+		//right=1
 		if(c == '0'){
 			aux= aux->left;
 		}else if(c == '1'){
 			aux= aux->right;
 		}
 		
+		//ao encontrar uma folha, adiciona o caractere no arquivo txt decodificado
 		if(aux->left == NULL && aux->right == NULL){
-			fprintf(decodedText_Arq,"%c", aux->c);
+			fprintf(decodedText,"%c", aux->c);
 			aux= root;
 		}
-		c= fgetc(compressedText_Arq);
+		c= fgetc(binaryText);
 	}
-	
-	fclose(compressedText_Arq);
-	fclose(decodedText_Arq);
+	fclose(binaryText);
+	fclose(decodedText);
 }
