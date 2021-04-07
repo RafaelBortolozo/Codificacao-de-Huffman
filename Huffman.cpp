@@ -5,10 +5,6 @@
 #include <conio.h>
 #define QTD_BITS 15
 
-/* Alunos: Lucas Mozzer & Rafael Bortolozo 
-   Codificação de Huffman
-*/
-
 typedef struct sNodo{ 
     struct sNodo* left;
 	struct sNodo* right;
@@ -159,7 +155,7 @@ Nodo* createHuffmanTree(std::vector<Nodo*> &vet){
 	Nodo* aux2;
 	while(vet.size()>0){
 		//retira 2 elementos menores
-		//como o vector ja esta ordenado, então retira os 2 primeiros
+		//como o vector ja esta ordenado, entÃ£o retira os 2 primeiros
 		aux1= vet.front();
 		vet.erase(vet.begin());
 		aux2= vet.front();
